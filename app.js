@@ -1,7 +1,16 @@
 (function () {
-    var STORAGE_KEY = "survey_responses";
     var currentQuestion = 0;
     var answers = {};
+    var supabaseClient = null;
+
+    function initSupabase() {
+        if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL) {
+            alert('请先配置 Supabase，详见 supabase-config.js');
+            return false;
+        }
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return true;
+    }
 
     function init() {
         document.getElementById("total-questions").textContent = SURVEY_QUESTIONS.length;
@@ -47,8 +56,8 @@
                 var otherSelected = answers[q.id] === "__other__" ? " selected" : "";
                 html += '<div class="option-item option-other' + otherSelected + '" onclick="window._selectRadioOther(\'' + q.id + '\',this)" data-value="__other__">';
                 html += '<input type="radio" name="' + q.id + '" value="__other__"' + (answers[q.id] === "__other__" ? " checked" : "") + ">";
-                html += "<label>其他</label>";
-                html += '<input type="text" class="other-text-input" id="other-' + q.id + '" value="' + escapeAttr(otherVal) + '" placeholder="请填写" onclick="event.stopPropagation()" oninput="window._inputOther(\'' + q.id + '\', this.value)">';
+                html += "<label>\u5176\u4ed6</label>";
+                html += '<input type="text" class="other-text-input" id="other-' + q.id + '" value="' + escapeAttr(otherVal) + '" placeholder="\u8bf7\u586b\u5199" onclick="event.stopPropagation()" oninput="window._inputOther(\'' + q.id + '\', this.value)">';
                 html += "</div>";
             }
             html += "</div>";
@@ -68,8 +77,8 @@
                 var otherTextVal = answers[q.id + "_other"] || "";
                 html += '<div class="option-item option-other' + otherSelected + '" onclick="window._toggleCheckboxOther(\'' + q.id + '\',this)" data-value="__other__">';
                 html += '<input type="checkbox" name="' + q.id + '" value="__other__"' + (otherSelected ? " checked" : "") + ">";
-                html += "<label>其他</label>";
-                html += '<input type="text" class="other-text-input" id="other-' + q.id + '" value="' + escapeAttr(otherTextVal) + '" placeholder="请填写" onclick="event.stopPropagation()" oninput="window._inputOther(\'' + q.id + '\', this.value)">';
+                html += "<label>\u5176\u4ed6</label>";
+                html += '<input type="text" class="other-text-input" id="other-' + q.id + '" value="' + escapeAttr(otherTextVal) + '" placeholder="\u8bf7\u586b\u5199" onclick="event.stopPropagation()" oninput="window._inputOther(\'' + q.id + '\', this.value)">';
                 html += "</div>";
             }
             html += "</div>";
@@ -87,12 +96,12 @@
             html += '<div class="rating-group">';
             for (var i = 1; i <= maxR; i++) {
                 var activeClass = i <= curRating ? " active" : "";
-                html += '<span class="rating-star' + activeClass + '" data-value="' + i + '" onclick="window._setRating(\'' + q.id + '\',' + i + ')">★</span>';
+                html += '<span class="rating-star' + activeClass + '" data-value="' + i + '" onclick="window._setRating(\'' + q.id + '\',' + i + ')">\u2605</span>';
             }
             html += "</div>";
         }
 
-        html += '<div class="error-msg">此项为必填项，请作答</div>';
+        html += '<div class="error-msg">\u6b64\u9879\u4e3a\u5fc5\u586b\u9879\uff0c\u8bf7\u4f5c\u7b54</div>';
         html += "</div>";
         container.innerHTML = html;
 
@@ -225,12 +234,12 @@
         if (q.hasOther) {
             var otherText = answers[qid + "_other"] || "";
             if (q.type === "radio") {
-                if (val === "__other__") return "其他：" + (otherText || "（未填写）");
+                if (val === "__other__") return "\u5176\u4ed6\uff1a" + (otherText || "\uff08\u672a\u586b\u5199\uff09");
                 return val;
             } else if (q.type === "checkbox") {
                 if (!val) return val;
                 return val.map(function (v) {
-                    if (v === "__other__") return "其他：" + (otherText || "（未填写）");
+                    if (v === "__other__") return "\u5176\u4ed6\uff1a" + (otherText || "\uff08\u672a\u586b\u5199\uff09");
                     return v;
                 });
             }
@@ -260,7 +269,7 @@
         }
     };
 
-    window.submitSurvey = function () {
+    window.submitSurvey = async function () {
         for (var i = 0; i < SURVEY_QUESTIONS.length; i++) {
             if (!validateQuestion(i)) {
                 currentQuestion = i;
@@ -269,197 +278,36 @@
             }
         }
 
+        if (!supabaseClient) {
+            if (!initSupabase()) return;
+        }
+
         var storedAnswers = {};
         SURVEY_QUESTIONS.forEach(function (q) {
             storedAnswers[q.id] = resolveAnswerForStorage(q.id, q);
         });
 
-        var response = {
-            id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
-            timestamp: new Date().toISOString(),
-            answers: storedAnswers
-        };
+        var btn = document.getElementById("btn-submit");
+        btn.disabled = true;
+        btn.textContent = "\u63d0\u4ea4\u4e2d...";
 
-        var responses = [];
-        try { responses = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) {}
-        responses.push(response);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(responses));
+        try {
+            var result = await supabaseClient
+                .from('responses')
+                .insert({ answers: storedAnswers });
 
-        showPage("page-thanks");
+            if (result.error) throw result.error;
+            showPage("page-thanks");
+        } catch (err) {
+            alert("\u63d0\u4ea4\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u7f51\u7edc\u540e\u91cd\u8bd5\uff1a" + (err.message || err));
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "\u63d0\u4ea4\u95ee\u5377";
+        }
     };
 
     window.fillAgain = function () {
         startSurvey();
-    };
-
-    window.viewResults = function () {
-        showPage("page-results");
-        renderResults();
-    };
-
-    window.backToHome = function () {
-        showPage("page-welcome");
-    };
-
-    function getAllOptionKeys(q) {
-        var keys = q.options.slice();
-        if (q.hasOther) keys.push("其他");
-        return keys;
-    }
-
-    function matchAnswer(answerVal, optKey, hasOther) {
-        if (answerVal === optKey) return true;
-        if (hasOther && optKey === "其他" && typeof answerVal === "string" && answerVal.indexOf("其他：") === 0) return true;
-        return false;
-    }
-
-    function matchAnswerArray(answerArr, optKey, hasOther) {
-        if (!answerArr) return false;
-        for (var i = 0; i < answerArr.length; i++) {
-            if (answerArr[i] === optKey) return true;
-            if (hasOther && optKey === "其他" && typeof answerArr[i] === "string" && answerArr[i].indexOf("其他：") === 0) return true;
-        }
-        return false;
-    }
-
-    function renderResults() {
-        var responses = [];
-        try { responses = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) {}
-
-        document.getElementById("result-count").textContent = responses.length;
-
-        var container = document.getElementById("results-container");
-        var html = "";
-
-        SURVEY_QUESTIONS.forEach(function (q) {
-            html += '<div class="result-card">';
-            html += "<h3>" + q.title + "</h3>";
-
-            var allOpts = getAllOptionKeys(q);
-
-            if (q.type === "radio") {
-                var counts = {};
-                allOpts.forEach(function (o) { counts[o] = 0; });
-                responses.forEach(function (r) {
-                    var a = r.answers[q.id];
-                    if (a) {
-                        var matched = false;
-                        allOpts.forEach(function (opt) {
-                            if (matchAnswer(a, opt, q.hasOther)) { counts[opt]++; matched = true; }
-                        });
-                    }
-                });
-                var maxCount = Math.max.apply(null, Object.values(counts).concat([1]));
-                html += '<div class="result-bar-group">';
-                allOpts.forEach(function (opt) {
-                    var c = counts[opt];
-                    var pct = maxCount > 0 ? (c / maxCount) * 100 : 0;
-                    var pctOfTotal = responses.length > 0 ? ((c / responses.length) * 100).toFixed(1) : "0.0";
-                    html += '<div class="result-bar-item">';
-                    html += '<span class="result-bar-label">' + opt + "</span>";
-                    html += '<div class="result-bar-track"><div class="result-bar-fill" style="width:' + pct + '%"></div></div>';
-                    html += '<span class="result-bar-count">' + c + " (" + pctOfTotal + "%)</span>";
-                    html += "</div>";
-                });
-                html += "</div>";
-            } else if (q.type === "checkbox") {
-                var counts = {};
-                allOpts.forEach(function (o) { counts[o] = 0; });
-                responses.forEach(function (r) {
-                    var a = r.answers[q.id] || [];
-                    allOpts.forEach(function (opt) {
-                        if (matchAnswerArray(a, opt, q.hasOther)) counts[opt]++;
-                    });
-                });
-                var maxCount = Math.max.apply(null, Object.values(counts).concat([1]));
-                html += '<div class="result-bar-group">';
-                allOpts.forEach(function (opt) {
-                    var c = counts[opt];
-                    var pct = maxCount > 0 ? (c / maxCount) * 100 : 0;
-                    var pctOfTotal = responses.length > 0 ? ((c / responses.length) * 100).toFixed(1) : "0.0";
-                    html += '<div class="result-bar-item">';
-                    html += '<span class="result-bar-label">' + opt + "</span>";
-                    html += '<div class="result-bar-track"><div class="result-bar-fill" style="width:' + pct + '%"></div></div>';
-                    html += '<span class="result-bar-count">' + c + " (" + pctOfTotal + "%)</span>";
-                    html += "</div>";
-                });
-                html += "</div>";
-            } else if (q.type === "rating") {
-                var total = 0;
-                var count = 0;
-                var dist = {};
-                for (var i = 1; i <= (q.maxRating || 5); i++) dist[i] = 0;
-                responses.forEach(function (r) {
-                    var a = r.answers[q.id];
-                    if (a) { total += a; count++; dist[a]++; }
-                });
-                var avg = count > 0 ? (total / count).toFixed(1) : "-";
-                html += '<div class="result-avg">' + avg + " / " + (q.maxRating || 5) + "</div>";
-                html += '<div class="result-bar-group">';
-                for (var i = (q.maxRating || 5); i >= 1; i--) {
-                    var c = dist[i];
-                    var maxDist = Math.max.apply(null, Object.values(dist).concat([1]));
-                    var pct = maxDist > 0 ? (c / maxDist) * 100 : 0;
-                    html += '<div class="result-bar-item">';
-                    html += '<span class="result-bar-label">' + i + "星</span>";
-                    html += '<div class="result-bar-track"><div class="result-bar-fill" style="width:' + pct + '%"></div></div>';
-                    html += '<span class="result-bar-count">' + c + "</span>";
-                    html += "</div>";
-                }
-                html += "</div>";
-            } else if (q.type === "text" || q.type === "textarea") {
-                html += '<ul class="result-text-list">';
-                var hasContent = false;
-                responses.forEach(function (r) {
-                    var a = r.answers[q.id];
-                    if (a && a.trim()) {
-                        html += "<li>" + escapeHtml(a) + "</li>";
-                        hasContent = true;
-                    }
-                });
-                if (!hasContent) html += '<li style="color:#94a3b8">暂无回答</li>';
-                html += "</ul>";
-            }
-
-            html += "</div>";
-        });
-
-        container.innerHTML = html;
-    }
-
-    function escapeHtml(s) {
-        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    }
-
-    window.exportCSV = function () {
-        var responses = [];
-        try { responses = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) {}
-
-        if (responses.length === 0) { alert("暂无数据可导出"); return; }
-
-        var headers = ["序号", "提交时间"];
-        SURVEY_QUESTIONS.forEach(function (q) { headers.push(q.title); });
-
-        var rows = [headers.join(",")];
-        responses.forEach(function (r, idx) {
-            var row = [idx + 1, new Date(r.timestamp).toLocaleString("zh-CN")];
-            SURVEY_QUESTIONS.forEach(function (q) {
-                var a = r.answers[q.id];
-                if (Array.isArray(a)) a = a.join(";");
-                else if (a === undefined || a === null) a = "";
-                row.push('"' + String(a).replace(/"/g, '""') + '"');
-            });
-            rows.push(row.join(","));
-        });
-
-        var csvContent = "\uFEFF" + rows.join("\n");
-        var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = "survey_results_" + new Date().toISOString().slice(0, 10) + ".csv";
-        a.click();
-        URL.revokeObjectURL(url);
     };
 
     init();

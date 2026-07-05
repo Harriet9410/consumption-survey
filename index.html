@@ -7,14 +7,14 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
     <div id="app">
         <header class="site-header">
             <div class="container">
                 <h1 class="site-title">大学生网络消费行为调查问卷</h1>
-                <p class="site-subtitle">为"喜欢"买单：大学生网络消费行为的自我观察</p>
+                <p class="site-subtitle">为\u201c喜欢\u201d买单：大学生网络消费行为的自我观察</p>
             </div>
         </header>
 
@@ -75,21 +75,8 @@
                     <h2>感谢您的参与！</h2>
                     <p>您的回答已成功提交，对我们非常重要。</p>
                     <div class="thanks-actions">
-                        <button class="btn btn-secondary" onclick="viewResults()">查看统计结果</button>
                         <button class="btn btn-primary" onclick="fillAgain()">再次填写</button>
                     </div>
-                </div>
-            </section>
-
-            <section id="page-results" class="page">
-                <div class="results-header">
-                    <h2>调查结果统计</h2>
-                    <p>共 <strong id="result-count">0</strong> 份有效答卷</p>
-                    <button class="btn btn-secondary btn-sm" onclick="exportCSV()">导出CSV</button>
-                </div>
-                <div id="results-container"></div>
-                <div class="results-back">
-                    <button class="btn btn-primary" onclick="backToHome()">返回首页</button>
                 </div>
             </section>
         </main>
@@ -101,7 +88,9 @@
         </footer>
     </div>
 
-    <script src="questions.js?v=2"></script>
-    <script src="app.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js?v=4"></script>
+    <script src="questions.js?v=4"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>

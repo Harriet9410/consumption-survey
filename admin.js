@@ -1,12 +1,15 @@
 (function () {
-    var STORAGE_KEY = "survey_responses";
-    var PWD_KEY = "survey_admin_pwd";
-    var DEFAULT_PWD = "admin123";
-    var isLoggedIn = false;
     var allResponses = [];
+    var isLoggedIn = false;
+    var supabaseClient = null;
 
-    function getPwd() {
-        return localStorage.getItem(PWD_KEY) || DEFAULT_PWD;
+    function initSupabase() {
+        if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL) {
+            alert('\u8bf7\u5148\u914d\u7f6e Supabase\uff0c\u8be6\u89c1 supabase-config.js');
+            return false;
+        }
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return true;
     }
 
     function showPage(id) {
@@ -14,28 +17,49 @@
         document.getElementById(id).classList.add("active");
     }
 
-    function loadResponses() {
-        try { allResponses = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) { allResponses = []; }
+    async function checkSession() {
+        if (!initSupabase()) return;
+        try {
+            var result = await supabaseClient.auth.getSession();
+            if (result.data && result.data.session) {
+                isLoggedIn = true;
+                showPage("page-dashboard");
+                await loadResponses();
+                renderDashboard();
+            }
+        } catch (e) {}
     }
 
-    window.handleLogin = function (e) {
+    window.handleLogin = async function (e) {
         e.preventDefault();
+        if (!supabaseClient && !initSupabase()) return false;
+
+        var email = document.getElementById("admin-email").value;
         var pwd = document.getElementById("admin-password").value;
-        if (pwd === getPwd()) {
+
+        try {
+            var result = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: pwd
+            });
+            if (result.error) throw result.error;
             isLoggedIn = true;
             document.getElementById("login-error").style.display = "none";
-            loadResponses();
             showPage("page-dashboard");
+            await loadResponses();
             renderDashboard();
-        } else {
+        } catch (err) {
             document.getElementById("login-error").style.display = "block";
+            document.getElementById("login-error").textContent = "\u767b\u5f55\u5931\u8d25\uff1a" + (err.message || "\u8bf7\u68c0\u67e5\u90ae\u7bb1\u548c\u5bc6\u7801");
         }
         return false;
     };
 
-    window.logout = function () {
+    window.logout = async function () {
+        if (supabaseClient) {
+            try { await supabaseClient.auth.signOut(); } catch (e) {}
+        }
         isLoggedIn = false;
-        document.getElementById("admin-password").value = "";
         showPage("page-login");
     };
 
@@ -46,25 +70,22 @@
         document.getElementById("tab-" + name).classList.add("active");
     };
 
-    window.changePassword = function (e) {
-        e.preventDefault();
-        var oldPwd = document.getElementById("old-pwd").value;
-        var newPwd = document.getElementById("new-pwd").value;
-        var newPwd2 = document.getElementById("new-pwd2").value;
-        var msg = document.getElementById("pwd-success");
-
-        if (oldPwd !== getPwd()) { alert("当前密码错误"); return false; }
-        if (newPwd !== newPwd2) { alert("两次输入的新密码不一致"); return false; }
-        if (newPwd.length < 4) { alert("密码长度不能少于4位"); return false; }
-
-        localStorage.setItem(PWD_KEY, newPwd);
-        msg.style.display = "block";
-        setTimeout(function () { msg.style.display = "none"; }, 2000);
-        document.getElementById("old-pwd").value = "";
-        document.getElementById("new-pwd").value = "";
-        document.getElementById("new-pwd2").value = "";
-        return false;
-    };
+    async function loadResponses() {
+        if (!supabaseClient) return;
+        try {
+            var result = await supabaseClient
+                .from('responses')
+                .select('*')
+                .order('created_at', { ascending: true });
+            if (result.error) throw result.error;
+            allResponses = (result.data || []).map(function (r) {
+                return { id: r.id, timestamp: r.created_at, answers: r.answers };
+            });
+        } catch (err) {
+            allResponses = [];
+            console.error('Failed to load responses:', err);
+        }
+    }
 
     function renderDashboard() {
         renderOverview();
@@ -77,7 +98,7 @@
         document.getElementById("stat-total").textContent = total;
 
         var today = new Date().toISOString().slice(0, 10);
-        var todayCount = allResponses.filter(function (r) { return r.timestamp.slice(0, 10) === today; }).length;
+        var todayCount = allResponses.filter(function (r) { return r.timestamp && r.timestamp.slice(0, 10) === today; }).length;
         document.getElementById("stat-today").textContent = todayCount;
 
         var requiredQs = SURVEY_QUESTIONS.filter(function (q) { return q.required; });
@@ -91,7 +112,6 @@
             totalCompletion += (filled / requiredQs.length) * 100;
         });
         document.getElementById("stat-complete").textContent = total > 0 ? Math.round(totalCompletion / total) + "%" : "0%";
-
         document.getElementById("stat-avgtime").textContent = total > 0 ? "~3min" : "-";
 
         renderTrendChart();
@@ -102,6 +122,7 @@
     function renderTrendChart() {
         var dateCounts = {};
         allResponses.forEach(function (r) {
+            if (!r.timestamp) return;
             var d = r.timestamp.slice(0, 10);
             dateCounts[d] = (dateCounts[d] || 0) + 1;
         });
@@ -111,7 +132,7 @@
 
         var container = document.getElementById("trend-chart");
         if (dates.length === 0) {
-            container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px">暂无提交数据</div>';
+            container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px">\u6682\u65e0\u63d0\u4ea4\u6570\u636e</div>';
             return;
         }
 
@@ -172,12 +193,10 @@
         var basicQs = SURVEY_QUESTIONS.slice(0, 4);
         var html = "";
         basicQs.forEach(function (q) {
-            var options = q.options.slice();
-            var counts = getOptionCounts(q.id, options, q.hasOther, q.type);
-            var total = allResponses.length;
+            var counts = getOptionCounts(q.id, q.options.slice(), q.hasOther, q.type);
             html += '<div class="overview-card">';
             html += '<h4>' + q.title + '</h4>';
-            html += renderBarChart(counts, total);
+            html += renderBarChart(counts, allResponses.length);
             html += '</div>';
         });
         container.innerHTML = html;
@@ -190,12 +209,10 @@
         keyQIds.forEach(function (qid) {
             var q = SURVEY_QUESTIONS.find(function (x) { return x.id === qid; });
             if (!q) return;
-            var options = q.options.slice();
-            var counts = getOptionCounts(q.id, options, q.hasOther, q.type);
-            var total = allResponses.length;
+            var counts = getOptionCounts(q.id, q.options.slice(), q.hasOther, q.type);
             html += '<div class="overview-card">';
             html += '<h4>' + q.title + '</h4>';
-            html += renderBarChart(counts, total);
+            html += renderBarChart(counts, allResponses.length);
             html += '</div>';
         });
         container.innerHTML = html;
@@ -219,39 +236,25 @@
         var html = '<div class="detail-card">';
 
         if (q.type === "radio") {
-            var options = q.options.slice();
-            if (q.hasOther) options.push("\u5176\u4ed6");
             var counts = getOptionCounts(q.id, q.options.slice(), q.hasOther, q.type);
-
-            html += '<div class="detail-header"><h3>' + q.title + '</h3><span class="detail-badge">' + total + ' 人作答</span></div>';
+            html += '<div class="detail-header"><h3>' + q.title + '</h3><span class="detail-badge">' + total + ' \u4eba\u4f5c\u7b54</span></div>';
             html += renderBarChart(counts, total);
-
-            html += '<div class="detail-cross">';
-            html += '<h4>\u4ea4\u53c9\u5206\u6790\uff1a\u6309\u6027\u522b</h4>';
+            html += '<div class="detail-cross"><h4>\u4ea4\u53c9\u5206\u6790\uff1a\u6309\u6027\u522b</h4>';
             html += renderCrossTab(q, "q1");
             html += '</div>';
-
-            html += '<div class="detail-cross">';
-            html += '<h4>\u4ea4\u53c9\u5206\u6790\uff1a\u6309\u5e74\u7ea7</h4>';
+            html += '<div class="detail-cross"><h4>\u4ea4\u53c9\u5206\u6790\uff1a\u6309\u5e74\u7ea7</h4>';
             html += renderCrossTab(q, "q2");
             html += '</div>';
-
         } else if (q.type === "checkbox") {
-            var options = q.options.slice();
-            if (q.hasOther) options.push("\u5176\u4ed6");
             var counts = getOptionCounts(q.id, q.options.slice(), q.hasOther, q.type);
-
-            html += '<div class="detail-header"><h3>' + q.title + '</h3><span class="detail-badge">' + total + ' 人作答</span></div>';
+            html += '<div class="detail-header"><h3>' + q.title + '</h3><span class="detail-badge">' + total + ' \u4eba\u4f5c\u7b54</span></div>';
             html += '<p class="detail-note">\u591a\u9009\u9898\uff0c\u767e\u5206\u6bd4\u4e4b\u548c\u53ef\u80fd\u8d85\u8fc7100%</p>';
             html += renderBarChart(counts, total);
-
-            html += '<div class="detail-cross">';
-            html += '<h4>\u4ea4\u53c9\u5206\u6790\uff1a\u6309\u6027\u522b</h4>';
+            html += '<div class="detail-cross"><h4>\u4ea4\u53c9\u5206\u6790\uff1a\u6309\u6027\u522b</h4>';
             html += renderCrossTabCheckbox(q, "q1");
             html += '</div>';
-
         } else if (q.type === "textarea" || q.type === "text") {
-            html += '<div class="detail-header"><h3>' + q.title + '</h3><span class="detail-badge">' + total + ' 人</span></div>';
+            html += '<div class="detail-header"><h3>' + q.title + '</h3><span class="detail-badge">' + total + ' \u4eba</span></div>';
             var answers = [];
             allResponses.forEach(function (r) {
                 var a = r.answers[q.id];
@@ -350,8 +353,8 @@
         return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    window.exportCSV = function () {
-        loadResponses();
+    window.exportCSV = async function () {
+        await loadResponses();
         if (allResponses.length === 0) { alert("\u6682\u65e0\u6570\u636e"); return; }
 
         var headers = ["\u5e8f\u53f7", "\u63d0\u4ea4\u65f6\u95f4"];
@@ -359,7 +362,7 @@
 
         var rows = [headers.join(",")];
         allResponses.forEach(function (r, idx) {
-            var row = [idx + 1, new Date(r.timestamp).toLocaleString("zh-CN")];
+            var row = [idx + 1, r.timestamp ? new Date(r.timestamp).toLocaleString("zh-CN") : ""];
             SURVEY_QUESTIONS.forEach(function (q) {
                 var a = r.answers[q.id];
                 if (Array.isArray(a)) a = a.join(";");
@@ -368,22 +371,19 @@
             });
             rows.push(row.join(","));
         });
-
         downloadCSV(rows, "survey_raw_data");
     };
 
-    window.exportStats = function () {
-        loadResponses();
+    window.exportStats = async function () {
+        await loadResponses();
         if (allResponses.length === 0) { alert("\u6682\u65e0\u6570\u636e"); return; }
         var total = allResponses.length;
         var rows = [];
 
         SURVEY_QUESTIONS.forEach(function (q) {
             if (q.type === "radio" || q.type === "checkbox") {
-                var options = q.options.slice();
-                if (q.hasOther) options.push("\u5176\u4ed6");
                 var counts = getOptionCounts(q.id, q.options.slice(), q.hasOther, q.type);
-                options.forEach(function (opt) {
+                Object.keys(counts).forEach(function (opt) {
                     var c = counts[opt] || 0;
                     rows.push(['"' + q.title.replace(/"/g, '""') + '"', '"' + opt.replace(/"/g, '""') + '"', c, total > 0 ? ((c / total) * 100).toFixed(2) + "%" : "0%"].join(","));
                 });
@@ -394,8 +394,8 @@
         downloadCSV([header].concat(rows), "survey_stats");
     };
 
-    window.exportCrossTab = function () {
-        loadResponses();
+    window.exportCrossTab = async function () {
+        await loadResponses();
         if (allResponses.length === 0) { alert("\u6682\u65e0\u6570\u636e"); return; }
 
         var groupFields = [{ id: "q1", name: "\u6027\u522b" }, { id: "q2", name: "\u5e74\u7ea7" }, { id: "q4", name: "\u6708\u53ef\u652f\u914d\u751f\u6d3b\u8d39" }];
@@ -449,13 +449,43 @@
         URL.revokeObjectURL(url);
     }
 
-    window.clearAllData = function () {
+    window.clearAllData = async function () {
         if (!confirm("\u786e\u5b9a\u8981\u6e05\u9664\u6240\u6709\u7b54\u5377\u6570\u636e\uff1f\u6b64\u64cd\u4f5c\u4e0d\u53ef\u6062\u590d\uff01")) return;
         if (!confirm("\u518d\u6b21\u786e\u8ba4\uff1a\u771f\u7684\u8981\u5220\u9664\u6240\u6709\u6570\u636e\uff1f")) return;
-        localStorage.removeItem(STORAGE_KEY);
-        allResponses = [];
-        renderDashboard();
-        alert("\u6570\u636e\u5df2\u6e05\u9664");
+
+        try {
+            var result = await supabaseClient.from('responses').delete().neq('id', 0);
+            if (result.error) throw result.error;
+            allResponses = [];
+            renderDashboard();
+            alert("\u6570\u636e\u5df2\u6e05\u9664");
+        } catch (err) {
+            alert("\u6e05\u9664\u5931\u8d25\uff1a" + (err.message || err));
+        }
     };
 
+    window.changePassword = async function (e) {
+        e.preventDefault();
+        if (!supabaseClient) { alert("\u8bf7\u5148\u767b\u5f55"); return false; }
+        var newPwd = document.getElementById("new-pwd").value;
+        var newPwd2 = document.getElementById("new-pwd2").value;
+        var msg = document.getElementById("pwd-success");
+
+        if (newPwd !== newPwd2) { alert("\u4e24\u6b21\u8f93\u5165\u7684\u65b0\u5bc6\u7801\u4e0d\u4e00\u81f4"); return false; }
+        if (newPwd.length < 6) { alert("\u5bc6\u7801\u957f\u5ea6\u4e0d\u80fd\u5c11\u4e8e6\u4f4d"); return false; }
+
+        try {
+            var result = await supabaseClient.auth.updateUser({ password: newPwd });
+            if (result.error) throw result.error;
+            msg.style.display = "block";
+            setTimeout(function () { msg.style.display = "none"; }, 2000);
+            document.getElementById("new-pwd").value = "";
+            document.getElementById("new-pwd2").value = "";
+        } catch (err) {
+            alert("\u4fee\u6539\u5931\u8d25\uff1a" + (err.message || err));
+        }
+        return false;
+    };
+
+    checkSession();
 })();
