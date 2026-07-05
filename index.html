@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大学生网络消费行为调查问卷</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header class="site-header">
+            <div class="container">
+                <h1 class="site-title">大学生网络消费行为调查问卷</h1>
+                <p class="site-subtitle">为"喜欢"买单：大学生网络消费行为的自我观察</p>
+            </div>
+        </header>
+
+        <main class="container">
+            <section id="page-welcome" class="page active">
+                <div class="welcome-card">
+                    <div class="welcome-icon">📋</div>
+                    <h2>欢迎参与调查</h2>
+                    <p class="welcome-desc">本问卷旨在了解大学生网络消费行为及其心理机制，所有数据仅用于学术研究，匿名填写，请根据真实情况作答，感谢您的参与！</p>
+                    <div class="welcome-info">
+                        <div class="info-item">
+                            <span class="info-icon">⏱</span>
+                            <span>预计用时 <strong id="estimated-time">3</strong> 分钟</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">📊</span>
+                            <span>共 <strong id="total-questions">0</strong> 道题</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">🔒</span>
+                            <span>匿名填写，信息保密</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg" onclick="startSurvey()">
+                        开始答题
+                    </button>
+                </div>
+            </section>
+
+            <section id="page-survey" class="page">
+                <div class="survey-header">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progress-current">1</span> / <span id="progress-total">0</span>
+                    </div>
+                </div>
+
+                <div id="questions-container"></div>
+
+                <div class="survey-nav">
+                    <button class="btn btn-secondary" id="btn-prev" onclick="prevQuestion()">
+                        上一题
+                    </button>
+                    <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()">
+                        下一题
+                    </button>
+                    <button class="btn btn-success" id="btn-submit" onclick="submitSurvey()" style="display:none;">
+                        提交问卷
+                    </button>
+                </div>
+            </section>
+
+            <section id="page-thanks" class="page">
+                <div class="thanks-card">
+                    <div class="thanks-icon">🎉</div>
+                    <h2>感谢您的参与！</h2>
+                    <p>您的回答已成功提交，对我们非常重要。</p>
+                    <div class="thanks-actions">
+                        <button class="btn btn-secondary" onclick="viewResults()">查看统计结果</button>
+                        <button class="btn btn-primary" onclick="fillAgain()">再次填写</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-results" class="page">
+                <div class="results-header">
+                    <h2>调查结果统计</h2>
+                    <p>共 <strong id="result-count">0</strong> 份有效答卷</p>
+                    <button class="btn btn-secondary btn-sm" onclick="exportCSV()">导出CSV</button>
+                </div>
+                <div id="results-container"></div>
+                <div class="results-back">
+                    <button class="btn btn-primary" onclick="backToHome()">返回首页</button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container">
+                <p>大学生网络消费行为调查 &copy; 2026 | 仅供学术研究使用</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
