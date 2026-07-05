@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>管理后台 - 大学生网络消费行为调查</title>
+    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="admin.css?v=3">
+</head>
+<body>
+    <div id="app">
+        <header class="site-header admin-header">
+            <div class="container" style="max-width:1100px">
+                <div class="admin-header-inner">
+                    <div>
+                        <h1 class="site-title">管理后台</h1>
+                        <p class="site-subtitle">大学生网络消费行为调查问卷</p>
+                    </div>
+                    <div class="admin-header-actions">
+                        <a href="index.html" class="btn btn-secondary btn-sm">返回问卷</a>
+                        <button class="btn btn-secondary btn-sm" onclick="logout()">退出登录</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container" style="max-width:1100px">
+            <section id="page-login" class="page active">
+                <div class="login-card">
+                    <div class="login-icon">&#128274;</div>
+                    <h2>管理员登录</h2>
+                    <form onsubmit="return handleLogin(event)">
+                        <div class="form-group">
+                            <label>管理密码</label>
+                            <input type="password" id="admin-password" class="text-input" placeholder="请输入管理密码" autofocus>
+                            <div class="error-msg" id="login-error" style="display:block;margin-top:8px;">密码错误</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg" style="width:100%">登录</button>
+                    </form>
+                    <p class="login-hint">默认密码：admin123（请登录后及时修改）</p>
+                </div>
+            </section>
+
+            <section id="page-dashboard" class="page">
+                <div class="dashboard-tabs">
+                    <button class="tab-btn active" onclick="switchTab('overview')">数据概览</button>
+                    <button class="tab-btn" onclick="switchTab('detail')">逐题分析</button>
+                    <button class="tab-btn" onclick="switchTab('export')">数据导出</button>
+                    <button class="tab-btn" onclick="switchTab('settings')">设置</button>
+                </div>
+
+                <div id="tab-overview" class="tab-panel active">
+                    <div class="stat-cards">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-total">0</div>
+                            <div class="stat-label">总答卷数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-today">0</div>
+                            <div class="stat-label">今日新增</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-complete">0%</div>
+                            <div class="stat-label">平均完成率</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-avgtime">-</div>
+                            <div class="stat-label">平均用时</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-section">
+                        <h3>提交时间趋势</h3>
+                        <div class="trend-chart" id="trend-chart"></div>
+                    </div>
+
+                    <div class="dashboard-section">
+                        <h3>基本信息分布</h3>
+                        <div class="overview-grid" id="overview-basic"></div>
+                    </div>
+
+                    <div class="dashboard-section">
+                        <h3>核心指标速览</h3>
+                        <div class="overview-grid" id="overview-key"></div>
+                    </div>
+                </div>
+
+                <div id="tab-detail" class="tab-panel">
+                    <div class="detail-controls">
+                        <select id="detail-question-select" class="text-input" onchange="renderDetailQuestion()">
+                        </select>
+                    </div>
+                    <div id="detail-content"></div>
+                </div>
+
+                <div id="tab-export" class="tab-panel">
+                    <div class="export-section">
+                        <div class="export-card">
+                            <h3>&#128196; 导出原始数据 (CSV)</h3>
+                            <p>导出所有答卷的原始数据，可用 Excel/SPSS 打开分析</p>
+                            <button class="btn btn-primary" onclick="exportCSV()">导出 CSV 文件</button>
+                        </div>
+                        <div class="export-card">
+                            <h3>&#128202; 导出统计报告</h3>
+                            <p>导出各题的统计分布数据（频次、百分比）</p>
+                            <button class="btn btn-primary" onclick="exportStats()">导出统计 CSV</button>
+                        </div>
+                        <div class="export-card">
+                            <h3>&#128203; 导出交叉分析</h3>
+                            <p>导出性别/年级与各题的交叉分析表</p>
+                            <button class="btn btn-primary" onclick="exportCrossTab()">导出交叉分析 CSV</button>
+                        </div>
+                        <div class="export-card">
+                            <h3>&#128465; 数据管理</h3>
+                            <p>清除所有答卷数据（不可恢复）</p>
+                            <button class="btn btn-danger" onclick="clearAllData()">清除所有数据</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-settings" class="tab-panel">
+                    <div class="settings-section">
+                        <div class="export-card">
+                            <h3>修改管理密码</h3>
+                            <form onsubmit="return changePassword(event)">
+                                <div class="form-group">
+                                    <label>当前密码</label>
+                                    <input type="password" id="old-pwd" class="text-input" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>新密码</label>
+                                    <input type="password" id="new-pwd" class="text-input" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>确认新密码</label>
+                                    <input type="password" id="new-pwd2" class="text-input" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">保存密码</button>
+                                <div class="success-msg" id="pwd-success">密码修改成功</div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container">
+                <p>管理后台 | 大学生网络消费行为调查 | 仅供管理员使用</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="questions.js?v=3"></script>
+    <script src="admin.js?v=3"></script>
+</body>
+</html>
