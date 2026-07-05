@@ -1,0 +1,2 @@
+var LC_APP_ID = 'YOUR_LC_APP_ID';
+var LC_APP_KEY = 'YOUR_LC_APP_KEY';

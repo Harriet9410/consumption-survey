@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>管理后台 - 大学生网络消费行为调查</title>
-    <link rel="stylesheet" href="style.css?v=4">
-    <link rel="stylesheet" href="admin.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="admin.css?v=5">
 </head>
 <body>
     <div id="app">
@@ -34,8 +31,8 @@
                     <h2>管理员登录</h2>
                     <form onsubmit="return handleLogin(event)">
                         <div class="form-group">
-                            <label>管理员邮箱</label>
-                            <input type="email" id="admin-email" class="text-input" placeholder="请输入管理员邮箱" required autofocus>
+                            <label>用户名</label>
+                            <input type="text" id="admin-username" class="text-input" placeholder="请输入管理员用户名" required autofocus>
                         </div>
                         <div class="form-group">
                             <label>密码</label>
@@ -44,7 +41,7 @@
                         </div>
                         <button type="submit" class="btn btn-primary btn-lg" style="width:100%">登录</button>
                     </form>
-                    <p class="login-hint">使用 Supabase 创建的管理员账号登录</p>
+                    <p class="login-hint">使用 LeanCloud 创建的管理员账号登录</p>
                 </div>
             </section>
 
@@ -58,44 +55,19 @@
 
                 <div id="tab-overview" class="tab-panel active">
                     <div class="stat-cards">
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-total">0</div>
-                            <div class="stat-label">总答卷数</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-today">0</div>
-                            <div class="stat-label">今日新增</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-complete">0%</div>
-                            <div class="stat-label">平均完成率</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-avgtime">-</div>
-                            <div class="stat-label">平均用时</div>
-                        </div>
+                        <div class="stat-card"><div class="stat-value" id="stat-total">0</div><div class="stat-label">总答卷数</div></div>
+                        <div class="stat-card"><div class="stat-value" id="stat-today">0</div><div class="stat-label">今日新增</div></div>
+                        <div class="stat-card"><div class="stat-value" id="stat-complete">0%</div><div class="stat-label">平均完成率</div></div>
+                        <div class="stat-card"><div class="stat-value" id="stat-avgtime">-</div><div class="stat-label">平均用时</div></div>
                     </div>
-
-                    <div class="dashboard-section">
-                        <h3>提交时间趋势</h3>
-                        <div class="trend-chart" id="trend-chart"></div>
-                    </div>
-
-                    <div class="dashboard-section">
-                        <h3>基本信息分布</h3>
-                        <div class="overview-grid" id="overview-basic"></div>
-                    </div>
-
-                    <div class="dashboard-section">
-                        <h3>核心指标速览</h3>
-                        <div class="overview-grid" id="overview-key"></div>
-                    </div>
+                    <div class="dashboard-section"><h3>提交时间趋势</h3><div class="trend-chart" id="trend-chart"></div></div>
+                    <div class="dashboard-section"><h3>基本信息分布</h3><div class="overview-grid" id="overview-basic"></div></div>
+                    <div class="dashboard-section"><h3>核心指标速览</h3><div class="overview-grid" id="overview-key"></div></div>
                 </div>
 
                 <div id="tab-detail" class="tab-panel">
                     <div class="detail-controls">
-                        <select id="detail-question-select" class="text-input" onchange="renderDetailQuestion()">
-                        </select>
+                        <select id="detail-question-select" class="text-input" onchange="renderDetailQuestion()"></select>
                     </div>
                     <div id="detail-content"></div>
                 </div>
@@ -130,14 +102,8 @@
                         <div class="export-card">
                             <h3>修改管理密码</h3>
                             <form onsubmit="return changePassword(event)">
-                                <div class="form-group">
-                                    <label>新密码</label>
-                                    <input type="password" id="new-pwd" class="text-input" required minlength="6">
-                                </div>
-                                <div class="form-group">
-                                    <label>确认新密码</label>
-                                    <input type="password" id="new-pwd2" class="text-input" required minlength="6">
-                                </div>
+                                <div class="form-group"><label>新密码</label><input type="password" id="new-pwd" class="text-input" required minlength="6"></div>
+                                <div class="form-group"><label>确认新密码</label><input type="password" id="new-pwd2" class="text-input" required minlength="6"></div>
                                 <button type="submit" class="btn btn-primary">保存密码</button>
                                 <div class="success-msg" id="pwd-success">密码修改成功</div>
                             </form>
@@ -148,15 +114,13 @@
         </main>
 
         <footer class="site-footer">
-            <div class="container">
-                <p>管理后台 | 大学生网络消费行为调查 | 仅供管理员使用</p>
-            </div>
+            <div class="container"><p>管理后台 | 大学生网络消费行为调查 | 仅供管理员使用</p></div>
         </footer>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=4"></script>
-    <script src="questions.js?v=4"></script>
-    <script src="admin.js?v=4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4/dist/av-min.js"></script>
+    <script src="leancloud-config.js?v=5"></script>
+    <script src="questions.js?v=5"></script>
+    <script src="admin.js?v=5"></script>
 </body>
 </html>

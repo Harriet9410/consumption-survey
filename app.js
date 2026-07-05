@@ -1,14 +1,12 @@
 (function () {
     var currentQuestion = 0;
     var answers = {};
-    var supabaseClient = null;
 
-    function initSupabase() {
-        if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL) {
-            alert('请先配置 Supabase，详见 supabase-config.js');
+    function initLC() {
+        if (typeof LC_APP_ID === 'undefined' || LC_APP_ID === 'YOUR_LC_APP_ID') {
             return false;
         }
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        AV.init({ appId: LC_APP_ID, appKey: LC_APP_KEY });
         return true;
     }
 
@@ -44,7 +42,7 @@
 
         if (q.type === "radio") {
             html += '<div class="option-group">';
-            q.options.forEach(function (opt, i) {
+            q.options.forEach(function (opt) {
                 var checked = answers[q.id] === opt ? " selected" : "";
                 html += '<div class="option-item' + checked + '" onclick="window._selectRadio(\'' + q.id + '\',this)" data-value="' + escapeAttr(opt) + '">';
                 html += '<input type="radio" name="' + q.id + '" value="' + escapeAttr(opt) + '"' + (answers[q.id] === opt ? " checked" : "") + ">";
@@ -64,7 +62,7 @@
         } else if (q.type === "checkbox") {
             html += '<div class="option-group">';
             var currentVals = answers[q.id] || [];
-            q.options.forEach(function (opt, i) {
+            q.options.forEach(function (opt) {
                 var checked = currentVals.indexOf(opt) >= 0 ? " selected" : "";
                 html += '<div class="option-item' + checked + '" onclick="window._toggleCheckbox(\'' + q.id + '\',this)" data-value="' + escapeAttr(opt) + '">';
                 html += '<input type="checkbox" name="' + q.id + '" value="' + escapeAttr(opt) + '"' + (currentVals.indexOf(opt) >= 0 ? " checked" : "") + ">";
@@ -141,25 +139,15 @@
         items.forEach(function (item) { item.classList.remove("selected"); item.querySelector("input").checked = false; });
         el.classList.add("selected");
         el.querySelector("input").checked = true;
-        setTimeout(function () {
-            var input = document.getElementById("other-" + qid);
-            if (input) input.focus();
-        }, 50);
+        setTimeout(function () { var input = document.getElementById("other-" + qid); if (input) input.focus(); }, 50);
     };
 
     window._toggleCheckbox = function (qid, el) {
         var value = el.getAttribute("data-value");
         if (!answers[qid]) answers[qid] = [];
         var idx = answers[qid].indexOf(value);
-        if (idx >= 0) {
-            answers[qid].splice(idx, 1);
-            el.classList.remove("selected");
-            el.querySelector("input").checked = false;
-        } else {
-            answers[qid].push(value);
-            el.classList.add("selected");
-            el.querySelector("input").checked = true;
-        }
+        if (idx >= 0) { answers[qid].splice(idx, 1); el.classList.remove("selected"); el.querySelector("input").checked = false; }
+        else { answers[qid].push(value); el.classList.add("selected"); el.querySelector("input").checked = true; }
         var card = document.getElementById("qcard-" + qid);
         if (answers[qid].length > 0) card.classList.remove("error");
     };
@@ -167,43 +155,20 @@
     window._toggleCheckboxOther = function (qid, el) {
         if (!answers[qid]) answers[qid] = [];
         var idx = answers[qid].indexOf("__other__");
-        if (idx >= 0) {
-            answers[qid].splice(idx, 1);
-            el.classList.remove("selected");
-            el.querySelector("input").checked = false;
-        } else {
-            answers[qid].push("__other__");
-            el.classList.add("selected");
-            el.querySelector("input").checked = true;
-            setTimeout(function () {
-                var input = document.getElementById("other-" + qid);
-                if (input) input.focus();
-            }, 50);
-        }
+        if (idx >= 0) { answers[qid].splice(idx, 1); el.classList.remove("selected"); el.querySelector("input").checked = false; }
+        else { answers[qid].push("__other__"); el.classList.add("selected"); el.querySelector("input").checked = true; setTimeout(function () { var input = document.getElementById("other-" + qid); if (input) input.focus(); }, 50); }
         var card = document.getElementById("qcard-" + qid);
         if (answers[qid].length > 0) card.classList.remove("error");
     };
 
-    window._inputOther = function (qid, value) {
-        answers[qid + "_other"] = value;
-    };
-
-    window._inputAnswer = function (qid, value) {
-        answers[qid] = value;
-        var card = document.getElementById("qcard-" + qid);
-        if (value.trim()) card.classList.remove("error");
-    };
+    window._inputOther = function (qid, value) { answers[qid + "_other"] = value; };
+    window._inputAnswer = function (qid, value) { answers[qid] = value; var card = document.getElementById("qcard-" + qid); if (value.trim()) card.classList.remove("error"); };
 
     window._setRating = function (qid, value) {
         answers[qid] = value;
         var card = document.getElementById("qcard-" + qid);
         card.classList.remove("error");
-        var stars = card.querySelectorAll(".rating-star");
-        stars.forEach(function (star) {
-            var v = parseInt(star.getAttribute("data-value"));
-            if (v <= value) star.classList.add("active");
-            else star.classList.remove("active");
-        });
+        card.querySelectorAll(".rating-star").forEach(function (star) { var v = parseInt(star.getAttribute("data-value")); if (v <= value) star.classList.add("active"); else star.classList.remove("active"); });
     };
 
     function validateQuestion(index) {
@@ -212,20 +177,10 @@
         var card = document.getElementById("qcard-" + q.id);
         var val = answers[q.id];
         var valid = true;
-
-        if (q.type === "radio" || q.type === "rating") {
-            valid = !!val;
-        } else if (q.type === "checkbox") {
-            valid = val && val.length > 0;
-        } else if (q.type === "text" || q.type === "textarea") {
-            valid = val && val.trim().length > 0;
-        }
-
-        if (!valid) {
-            card.classList.add("error");
-        } else {
-            card.classList.remove("error");
-        }
+        if (q.type === "radio" || q.type === "rating") { valid = !!val; }
+        else if (q.type === "checkbox") { valid = val && val.length > 0; }
+        else if (q.type === "text" || q.type === "textarea") { valid = val && val.trim().length > 0; }
+        if (!valid) card.classList.add("error"); else card.classList.remove("error");
         return valid;
     }
 
@@ -238,65 +193,34 @@
                 return val;
             } else if (q.type === "checkbox") {
                 if (!val) return val;
-                return val.map(function (v) {
-                    if (v === "__other__") return "\u5176\u4ed6\uff1a" + (otherText || "\uff08\u672a\u586b\u5199\uff09");
-                    return v;
-                });
+                return val.map(function (v) { if (v === "__other__") return "\u5176\u4ed6\uff1a" + (otherText || "\uff08\u672a\u586b\u5199\uff09"); return v; });
             }
         }
         return val;
     }
 
-    window.startSurvey = function () {
-        currentQuestion = 0;
-        answers = {};
-        showPage("page-survey");
-        renderQuestion(0);
-    };
-
-    window.nextQuestion = function () {
-        if (!validateQuestion(currentQuestion)) return;
-        if (currentQuestion < SURVEY_QUESTIONS.length - 1) {
-            currentQuestion++;
-            renderQuestion(currentQuestion);
-        }
-    };
-
-    window.prevQuestion = function () {
-        if (currentQuestion > 0) {
-            currentQuestion--;
-            renderQuestion(currentQuestion);
-        }
-    };
+    window.startSurvey = function () { currentQuestion = 0; answers = {}; showPage("page-survey"); renderQuestion(0); };
+    window.nextQuestion = function () { if (!validateQuestion(currentQuestion)) return; if (currentQuestion < SURVEY_QUESTIONS.length - 1) { currentQuestion++; renderQuestion(currentQuestion); } };
+    window.prevQuestion = function () { if (currentQuestion > 0) { currentQuestion--; renderQuestion(currentQuestion); } };
 
     window.submitSurvey = async function () {
-        for (var i = 0; i < SURVEY_QUESTIONS.length; i++) {
-            if (!validateQuestion(i)) {
-                currentQuestion = i;
-                renderQuestion(i);
-                return;
-            }
-        }
+        for (var i = 0; i < SURVEY_QUESTIONS.length; i++) { if (!validateQuestion(i)) { currentQuestion = i; renderQuestion(i); return; } }
 
-        if (!supabaseClient) {
-            if (!initSupabase()) return;
-        }
+        if (!initLC()) { alert('\u8bf7\u5148\u914d\u7f6e LeanCloud\uff0c\u8be6\u89c1 leancloud-config.js'); return; }
 
         var storedAnswers = {};
-        SURVEY_QUESTIONS.forEach(function (q) {
-            storedAnswers[q.id] = resolveAnswerForStorage(q.id, q);
-        });
+        SURVEY_QUESTIONS.forEach(function (q) { storedAnswers[q.id] = resolveAnswerForStorage(q.id, q); });
 
         var btn = document.getElementById("btn-submit");
         btn.disabled = true;
         btn.textContent = "\u63d0\u4ea4\u4e2d...";
 
         try {
-            var result = await supabaseClient
-                .from('responses')
-                .insert({ answers: storedAnswers });
-
-            if (result.error) throw result.error;
+            var Response = AV.Object.extend("Response");
+            var obj = new Response();
+            obj.set("answers", storedAnswers);
+            obj.set("submittedAt", new Date());
+            await obj.save();
             showPage("page-thanks");
         } catch (err) {
             alert("\u63d0\u4ea4\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u7f51\u7edc\u540e\u91cd\u8bd5\uff1a" + (err.message || err));
@@ -306,9 +230,6 @@
         }
     };
 
-    window.fillAgain = function () {
-        startSurvey();
-    };
-
+    window.fillAgain = function () { startSurvey(); };
     init();
 })();

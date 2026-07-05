@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大学生网络消费行为调查问卷</title>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
     <div id="app">
@@ -25,47 +22,24 @@
                     <h2>欢迎参与调查</h2>
                     <p class="welcome-desc">本问卷旨在了解大学生网络消费行为及其心理机制，所有数据仅用于学术研究，匿名填写，请根据真实情况作答，感谢您的参与！</p>
                     <div class="welcome-info">
-                        <div class="info-item">
-                            <span class="info-icon">⏱</span>
-                            <span>预计用时 <strong id="estimated-time">3</strong> 分钟</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-icon">📊</span>
-                            <span>共 <strong id="total-questions">0</strong> 道题</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-icon">🔒</span>
-                            <span>匿名填写，信息保密</span>
-                        </div>
+                        <div class="info-item"><span class="info-icon">⏱</span><span>预计用时 <strong id="estimated-time">3</strong> 分钟</span></div>
+                        <div class="info-item"><span class="info-icon">📊</span><span>共 <strong id="total-questions">0</strong> 道题</span></div>
+                        <div class="info-item"><span class="info-icon">🔒</span><span>匿名填写，信息保密</span></div>
                     </div>
-                    <button class="btn btn-primary btn-lg" onclick="startSurvey()">
-                        开始答题
-                    </button>
+                    <button class="btn btn-primary btn-lg" onclick="startSurvey()">开始答题</button>
                 </div>
             </section>
 
             <section id="page-survey" class="page">
                 <div class="survey-header">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progress-fill"></div>
-                    </div>
-                    <div class="progress-text">
-                        <span id="progress-current">1</span> / <span id="progress-total">0</span>
-                    </div>
+                    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+                    <div class="progress-text"><span id="progress-current">1</span> / <span id="progress-total">0</span></div>
                 </div>
-
                 <div id="questions-container"></div>
-
                 <div class="survey-nav">
-                    <button class="btn btn-secondary" id="btn-prev" onclick="prevQuestion()">
-                        上一题
-                    </button>
-                    <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()">
-                        下一题
-                    </button>
-                    <button class="btn btn-success" id="btn-submit" onclick="submitSurvey()" style="display:none;">
-                        提交问卷
-                    </button>
+                    <button class="btn btn-secondary" id="btn-prev" onclick="prevQuestion()">上一题</button>
+                    <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()">下一题</button>
+                    <button class="btn btn-success" id="btn-submit" onclick="submitSurvey()" style="display:none;">提交问卷</button>
                 </div>
             </section>
 
@@ -82,15 +56,13 @@
         </main>
 
         <footer class="site-footer">
-            <div class="container">
-                <p>大学生网络消费行为调查 &copy; 2026 | 仅供学术研究使用</p>
-            </div>
+            <div class="container"><p>大学生网络消费行为调查 &copy; 2026 | 仅供学术研究使用</p></div>
         </footer>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=4"></script>
-    <script src="questions.js?v=4"></script>
-    <script src="app.js?v=4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4/dist/av-min.js"></script>
+    <script src="leancloud-config.js?v=5"></script>
+    <script src="questions.js?v=5"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>
